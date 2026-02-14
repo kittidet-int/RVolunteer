@@ -1,6 +1,6 @@
 /**
- * Program: PCD AirQuality Library
- * Description: 
+ * Library: PCD_AirQuality_Lib
+ * Description: Retrieve air quality data from PCD
  * * Copyright (C) 2026  Kittidet Intharaksa
  * * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
