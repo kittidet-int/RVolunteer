@@ -236,6 +236,21 @@ function _generateSemanticTables(ss) {
   if (!sourceSheet) {
     throw new Error("[GISTDA_Hotspot_Lib] Semantic: Data sheet not found");
   }
+ 
+  if (lastCol < 1 || lastRow < 2) {
+    Logger.log("[GISTDA_Hotspot_Lib] Warning: No data. Skip creating semantic table");
+
+    // ล้างชีตปลายทางทิ้งด้วย ป้องกันการดึงข้อมูลของวันก่อนหน้าไปส่งไลน์ซ้ำ
+    const semanticSheets = [CONFIG.SHEET_COUNTRY, CONFIG.SHEET_PROVINCE, CONFIG.SHEET_LANDUSE];
+    semanticSheets.forEach(sheetName => {
+      let sheet = ss.getSheetByName(sheetName);
+      if (sheet) {
+        sheet.clear();
+      }
+    });
+
+    return;
+  }
 
   // 1. Find mandatory columns
   const headers = sourceSheet.getRange(1, 1, 1, sourceSheet.getLastColumn()).getValues()[0];
