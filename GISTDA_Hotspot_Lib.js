@@ -12,16 +12,16 @@
  * GNU General Public License for more details.
  * * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+**/
 
 // ==========================================
 // CONFIGURATION DEFAULTS
 // ==========================================
 var CONFIG = {
   SHEET_DAILY: 'Daily',
-  SHEET_COUNTRY: 'Semantic_Country',
-  SHEET_PROVINCE: 'Semantic_Province_TH',
-  SHEET_LANDUSE: 'Semantic_Landuse_TH',
+  // SHEET_COUNTRY: 'Semantic_Country',
+  // SHEET_PROVINCE: 'Semantic_Province_TH',
+  // SHEET_LANDUSE: 'Semantic_Landuse_TH',
 };
 
 // ==========================================
@@ -32,7 +32,7 @@ var CONFIG = {
  * @param {string} folderId - Google Drive's folder ID to store the data file
  * @param {boolean} isTestMode - If true, will be in Test mode
  * @return {Spreadsheet} - Return the Spreadsheet
- */
+**/
 function executePipeline(folderId, isTestMode) {
   if (!folderId) {
     throw new Error("[GISTDA_Hotspot_Lib]: Folder ID cannot be null");
@@ -207,78 +207,78 @@ function _fetchDataToSpreadsheet(ss) {
 }
 
 // Convert index (0, 1, 2) to character (A, B, C)
-function _getColumnLetter(index) {
-  if (index < 0) {
-    return null;
-  }
+// function _getColumnLetter(index) {
+//   if (index < 0) {
+//     return null;
+//   }
 
-  let temp, letter = '';
-  while (index >= 0) {
-    temp = (index) % 26;
-    letter = String.fromCharCode(temp + 65) + letter;
-    index = Math.floor((index) / 26) - 1;
-  }
-  return letter;
-}
+//   let temp, letter = '';
+//   while (index >= 0) {
+//     temp = (index) % 26;
+//     letter = String.fromCharCode(temp + 65) + letter;
+//     index = Math.floor((index) / 26) - 1;
+//   }
+//   return letter;
+// }
 
-function _createSemanticSheet(ss, sheetName, queryString) {
-  let sheet = ss.getSheetByName(sheetName);
-  if (!sheet) {
-    sheet = ss.insertSheet(sheetName);
-  }
-  sheet.clear();
-  sheet.getRange("A1").setFormula(queryString);
-}
+// function _createSemanticSheet(ss, sheetName, queryString) {
+//   let sheet = ss.getSheetByName(sheetName);
+//   if (!sheet) {
+//     sheet = ss.insertSheet(sheetName);
+//   }
+//   sheet.clear();
+//   sheet.getRange("A1").setFormula(queryString);
+// }
 
-function _generateSemanticTables(ss) {
-  Logger.log("[GISTDA_Hotspot_Lib] Semantic starts...");
+// function _generateSemanticTables(ss) {
+//   Logger.log("[GISTDA_Hotspot_Lib] Semantic starts...");
 
-  const sourceSheet = ss.getSheetByName(CONFIG.SHEET_DAILY);
-  if (!sourceSheet) {
-    throw new Error("[GISTDA_Hotspot_Lib] Semantic: Data sheet not found");
-  }
+//   const sourceSheet = ss.getSheetByName(CONFIG.SHEET_DAILY);
+//   if (!sourceSheet) {
+//     throw new Error("[GISTDA_Hotspot_Lib] Semantic: Data sheet not found");
+//   }
 
-  const lastCol = sourceSheet.getLastColumn();
-  const lastRow = sourceSheet.getLastRow();
+//   const lastCol = sourceSheet.getLastColumn();
+//   const lastRow = sourceSheet.getLastRow();
 
-  if (lastCol < 1 || lastRow < 2) {
-    Logger.log("[GISTDA_Hotspot_Lib] Warning: No data. Skip creating semantic table");
+//   if (lastCol < 1 || lastRow < 2) {
+//     Logger.log("[GISTDA_Hotspot_Lib] Warning: No data. Skip creating semantic table");
 
-    // ล้างชีตปลายทางทิ้งด้วย ป้องกันการดึงข้อมูลของวันก่อนหน้าไปส่งไลน์ซ้ำ
-    const semanticSheets = [CONFIG.SHEET_COUNTRY, CONFIG.SHEET_PROVINCE, CONFIG.SHEET_LANDUSE];
-    semanticSheets.forEach(sheetName => {
-      let sheet = ss.getSheetByName(sheetName);
-      if (sheet) {
-        sheet.clear();
-      }
-    });
+//     // ล้างชีตปลายทางทิ้งด้วย ป้องกันการดึงข้อมูลของวันก่อนหน้าไปส่งไลน์ซ้ำ
+//     const semanticSheets = [CONFIG.SHEET_COUNTRY, CONFIG.SHEET_PROVINCE, CONFIG.SHEET_LANDUSE];
+//     semanticSheets.forEach(sheetName => {
+//       let sheet = ss.getSheetByName(sheetName);
+//       if (sheet) {
+//         sheet.clear();
+//       }
+//     });
 
-    return;
-  }
+//     return;
+//   }
 
-  // 1. Find mandatory columns
-  const headers = sourceSheet.getRange(1, 1, 1, sourceSheet.getLastColumn()).getValues()[0];
-  const colCt = _getColumnLetter(headers.indexOf('ct_en'));   // Country
-  const colPv = _getColumnLetter(headers.indexOf('pv_tn'));   // Province (TH)
-  const colLu = _getColumnLetter(headers.indexOf('lu_name')); // Land Use
+//   // 1. Find mandatory columns
+//   const headers = sourceSheet.getRange(1, 1, 1, sourceSheet.getLastColumn()).getValues()[0];
+//   const colCt = _getColumnLetter(headers.indexOf('ct_en'));   // Country
+//   const colPv = _getColumnLetter(headers.indexOf('pv_tn'));   // Province (TH)
+//   const colLu = _getColumnLetter(headers.indexOf('lu_name')); // Land Use
 
-  if (!colCt || !colPv || !colLu) {
-    throw new Error("[GISTDA_Hotspot_Lib] Semantic Error: Mandatory columns (ct_en, pv_tn, lu_name) not found");
-  }
+//   if (!colCt || !colPv || !colLu) {
+//     throw new Error("[GISTDA_Hotspot_Lib] Semantic Error: Mandatory columns (ct_en, pv_tn, lu_name) not found");
+//   }
 
-  const rawName = CONFIG.SHEET_DAILY;
+//   const rawName = CONFIG.SHEET_DAILY;
 
-  // --- Semantic 1: Group by country (excludes China) ---
-  const qCountry = `=QUERY('${rawName}'!A:BH, "SELECT ${colCt}, COUNT(${colCt}) WHERE ${colCt} IS NOT NULL AND ${colCt} != 'China' GROUP BY ${colCt} ORDER BY COUNT(${colCt}) DESC LABEL ${colCt} 'Country', COUNT(${colCt}) 'Hotspots'", 1)`;
-  _createSemanticSheet(ss, CONFIG.SHEET_COUNTRY, qCountry);
+//   // --- Semantic 1: Group by country (excludes China) ---
+//   const qCountry = `=QUERY('${rawName}'!A:BH, "SELECT ${colCt}, COUNT(${colCt}) WHERE ${colCt} IS NOT NULL AND ${colCt} != 'China' GROUP BY ${colCt} ORDER BY COUNT(${colCt}) DESC LABEL ${colCt} 'Country', COUNT(${colCt}) 'Hotspots'", 1)`;
+//   _createSemanticSheet(ss, CONFIG.SHEET_COUNTRY, qCountry);
 
-  // --- Semantic 2: Group by province (only Thailand) ---
-  const qProvince = `=QUERY('${rawName}'!A:BH, "SELECT ${colPv}, COUNT(${colPv}) WHERE ${colCt} = 'Thailand' AND ${colPv} IS NOT NULL GROUP BY ${colPv} ORDER BY COUNT(${colPv}) DESC LABEL ${colPv} 'Province (TH)', COUNT(${colPv}) 'Hotspots'", 1)`;
-  _createSemanticSheet(ss, CONFIG.SHEET_PROVINCE, qProvince);
+//   // --- Semantic 2: Group by province (only Thailand) ---
+//   const qProvince = `=QUERY('${rawName}'!A:BH, "SELECT ${colPv}, COUNT(${colPv}) WHERE ${colCt} = 'Thailand' AND ${colPv} IS NOT NULL GROUP BY ${colPv} ORDER BY COUNT(${colPv}) DESC LABEL ${colPv} 'Province (TH)', COUNT(${colPv}) 'Hotspots'", 1)`;
+//   _createSemanticSheet(ss, CONFIG.SHEET_PROVINCE, qProvince);
 
-  // --- Semantic 3: Group by Land Use (only Thailand) ---
-  const qLanduse = `=QUERY('${rawName}'!A:BH, "SELECT ${colLu}, COUNT(${colLu}) WHERE ${colCt} = 'Thailand' AND ${colLu} IS NOT NULL GROUP BY ${colLu} ORDER BY COUNT(${colLu}) DESC LABEL ${colLu} 'Land Use', COUNT(${colLu}) 'Hotspots'", 1)`;
-  _createSemanticSheet(ss, CONFIG.SHEET_LANDUSE, qLanduse);
+//   // --- Semantic 3: Group by Land Use (only Thailand) ---
+//   const qLanduse = `=QUERY('${rawName}'!A:BH, "SELECT ${colLu}, COUNT(${colLu}) WHERE ${colCt} = 'Thailand' AND ${colLu} IS NOT NULL GROUP BY ${colLu} ORDER BY COUNT(${colLu}) DESC LABEL ${colLu} 'Land Use', COUNT(${colLu}) 'Hotspots'", 1)`;
+//   _createSemanticSheet(ss, CONFIG.SHEET_LANDUSE, qLanduse);
 
-  Logger.log("[GISTDA_Hotspot_Lib] Semantic finished");
-}
+//   Logger.log("[GISTDA_Hotspot_Lib] Semantic finished");
+// }
