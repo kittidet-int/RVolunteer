@@ -33,7 +33,7 @@ var CONFIG = {
  * @param {boolean} isTestMode - If true, will be in Test mode
  * @return {Spreadsheet} - Return the Spreadsheet
 **/
-function executePipeline(folderId, isTestMode) {
+function executePipeline(folderId, limit = 1000, isTestMode = false) {
   if (!folderId) {
     throw new Error("[GISTDA_Hotspot_Lib]: Folder ID cannot be null");
   }
@@ -60,7 +60,7 @@ function executePipeline(folderId, isTestMode) {
   const ss = _prepareHotspotSpreadsheet(folderId, masterFileName, archiveFileName);
 
   // 2. Fetch API
-  _fetchDataToSpreadsheet(ss);
+  _fetchDataToSpreadsheet(ss, limit);
 
   // 3. Generate Semantic Tables
   // _generateSemanticTables(ss);
@@ -112,7 +112,7 @@ function _prepareHotspotSpreadsheet(folderId, masterName, archiveFileName) {
   return ss;
 }
 
-function _fetchDataToSpreadsheet(ss) {
+function _fetchDataToSpreadsheet(ss, limit = 1000) {
   const BASE_ENDPOINT = "https://api-gateway.gistda.or.th/api/2.0/resources/features/viirs/1day";
   const apiKey = PropertiesService.getScriptProperties().getProperty('GISTDA_KEY');
 
@@ -123,7 +123,6 @@ function _fetchDataToSpreadsheet(ss) {
   let allRows = [];
   let offset = 0;
   let hasMoreData = true;
-  const LIMIT = 1000;
   const MAX_LIMIT = 100000;
 
   // Headers
@@ -139,9 +138,10 @@ function _fetchDataToSpreadsheet(ss) {
   ];
 
   Logger.log("[GISTDA_Hotspot_Lib] Data retrieving starts...")
+  Logger.log(`[GISTDA_Hotspot_Lib] Limit = ${limit}`);
 
   do {
-    const url = `${BASE_ENDPOINT}?api_key=${apiKey}&limit=${LIMIT}&offset=${offset}`;
+    const url = `${BASE_ENDPOINT}?api_key=${apiKey}&limit=${limit}&offset=${offset}`;
     const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
     const responseCode = response.getResponseCode();
     if (responseCode !== 200) {      
