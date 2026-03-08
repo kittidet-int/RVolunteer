@@ -1,25 +1,24 @@
-/*
-Copyright (C) 2026 Kittidet Intharaksa
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
+/**
+ * Library: GISTDA_Hotspot_Lib
+ * Description: A Google Apps Script to analyze VIIRS/MODIS hotspot data and generate summary tables.
+ * * Copyright (C) 2026  Kittidet Intharaksa
+ * * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
 // ==========================================
 // CONFIGURATION DEFAULTS
 // ==========================================
 var CONFIG = {
-  SHEET_RAW: 'Daily',
+  SHEET_DAILY: 'Daily',
   SHEET_COUNTRY: 'Semantic_Country',
   SHEET_PROVINCE: 'Semantic_Province_TH',
   SHEET_LANDUSE: 'Semantic_Landuse_TH',
@@ -39,8 +38,10 @@ function executePipeline(folderId, isTestMode) {
     throw new Error("[GISTDA_Hotspot_Lib]: Folder ID cannot be null");
   }
 
-  // Define the archive file name (T-2)
   const today = new Date();
+  // Data date (T-1)
+  const dataDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+  // Archive date (T-2)
   const archiveDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2);
   const archiveDateStr = Utilities.formatDate(archiveDate, Session.getScriptTimeZone(), "yyyyMMdd");
 
@@ -53,7 +54,7 @@ function executePipeline(folderId, isTestMode) {
     Logger.log("[GISTDA_Hotspot_Lib] Running in TEST MODE");
   }
 
-  Logger.log(`[GISTDA_Hotspot_Lib] Processing date: ${Utilities.formatDate(today, Session.getScriptTimeZone(), "yyyy-MM-dd")}`);
+  Logger.log(`[GISTDA_Hotspot_Lib] Data date: ${Utilities.formatDate(dataDate, Session.getScriptTimeZone(), "yyyy-MM-dd")}`);
 
   // 1. Prepare File
   const ss = _prepareHotspotSpreadsheet(folderId, masterFileName, archiveFileName);
@@ -62,7 +63,7 @@ function executePipeline(folderId, isTestMode) {
   _fetchDataToSpreadsheet(ss);
 
   // 3. Generate Semantic Tables
-  _generateSemanticTables(ss);
+  // _generateSemanticTables(ss);
 
   return ss;
 }
@@ -81,31 +82,31 @@ function _prepareHotspotSpreadsheet(folderId, masterName, archiveFileName) {
     ss = SpreadsheetApp.open(file);
 
     // Archive Logic
-    const existingArchives = folder.getFilesByName(archiveFileName);
+    // const existingArchives = folder.getFilesByName(archiveFileName);
     // if (existingArchives.hasNext()) {
     //   existingArchives.next().setTrashed(true);
     // }
     file.makeCopy(archiveFileName, folder);
 
-    // Clear Sheets
-    let dailySheet = ss.getSheetByName(CONFIG.SHEET_RAW);
+    // Clear Daily Sheet
+    let dailySheet = ss.getSheetByName(CONFIG.SHEET_DAILY);
     if (!dailySheet) {
-      dailySheet = ss.insertSheet(CONFIG.SHEET_RAW);
+      dailySheet = ss.insertSheet(CONFIG.SHEET_DAILY);
     }
     dailySheet.clear();
 
     // Cleanup
-    const allSheets = ss.getSheets();
-    const keepSheets = [CONFIG.SHEET_RAW];
-    allSheets.forEach(sheet => {
-      if (!keepSheets.includes(sheet.getName())) {
-        ss.deleteSheet(sheet);
-      }
-    });
+    // const allSheets = ss.getSheets();
+    // const keepSheets = [CONFIG.SHEET_DAILY];
+    // allSheets.forEach(sheet => {
+    //   if (!keepSheets.includes(sheet.getName())) {
+    //     ss.deleteSheet(sheet);
+    //   }
+    // });
   } else {
     ss = SpreadsheetApp.create(masterName);
     const sheet = ss.getActiveSheet();
-    sheet.setName(CONFIG.SHEET_RAW);
+    sheet.setName(CONFIG.SHEET_DAILY);
     DriveApp.getFileById(ss.getId()).moveTo(folder);
   }
   return ss;
@@ -143,8 +144,8 @@ function _fetchDataToSpreadsheet(ss) {
     const url = `${BASE_ENDPOINT}?api_key=${apiKey}&limit=${LIMIT}&offset=${offset}`;
     const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
     const responseCode = response.getResponseCode();
-    if (responseCode !== 200) {
-      throw new Error(`[GISTDA_Hotspot_Lib]: API Error (${responseCode})`);
+    if (responseCode !== 200) {      
+      throw new Error(`[GISTDA_Hotspot_Lib]: API Error (${responseCode})\n${response.getContentText()}`);
     }
 
     const json = JSON.parse(response.getContentText());
@@ -190,7 +191,7 @@ function _fetchDataToSpreadsheet(ss) {
   } while (hasMoreData);
 
   if (allRows.length > 0) {
-    const sheet = ss.getSheetByName(CONFIG.SHEET_RAW);
+    const sheet = ss.getSheetByName(CONFIG.SHEET_DAILY);
     sheet.appendRow(headers);
     sheet.getRange(2, 1, allRows.length, headers.length).setValues(allRows);
 
@@ -232,11 +233,14 @@ function _createSemanticSheet(ss, sheetName, queryString) {
 function _generateSemanticTables(ss) {
   Logger.log("[GISTDA_Hotspot_Lib] Semantic starts...");
 
-  const sourceSheet = ss.getSheetByName(CONFIG.SHEET_RAW);
+  const sourceSheet = ss.getSheetByName(CONFIG.SHEET_DAILY);
   if (!sourceSheet) {
     throw new Error("[GISTDA_Hotspot_Lib] Semantic: Data sheet not found");
   }
- 
+
+  const lastCol = sourceSheet.getLastColumn();
+  const lastRow = sourceSheet.getLastRow();
+
   if (lastCol < 1 || lastRow < 2) {
     Logger.log("[GISTDA_Hotspot_Lib] Warning: No data. Skip creating semantic table");
 
@@ -262,18 +266,18 @@ function _generateSemanticTables(ss) {
     throw new Error("[GISTDA_Hotspot_Lib] Semantic Error: Mandatory columns (ct_en, pv_tn, lu_name) not found");
   }
 
-  const rawName = CONFIG.SHEET_RAW;
+  const rawName = CONFIG.SHEET_DAILY;
 
   // --- Semantic 1: Group by country (excludes China) ---
-  const qCountry = `=QUERY('${rawName}'!A:ZZ, "SELECT ${colCt}, COUNT(${colCt}) WHERE ${colCt} IS NOT NULL AND ${colCt} != 'China' GROUP BY ${colCt} ORDER BY COUNT(${colCt}) DESC LABEL ${colCt} 'Country', COUNT(${colCt}) 'Hotspots'", 1)`;
+  const qCountry = `=QUERY('${rawName}'!A:BH, "SELECT ${colCt}, COUNT(${colCt}) WHERE ${colCt} IS NOT NULL AND ${colCt} != 'China' GROUP BY ${colCt} ORDER BY COUNT(${colCt}) DESC LABEL ${colCt} 'Country', COUNT(${colCt}) 'Hotspots'", 1)`;
   _createSemanticSheet(ss, CONFIG.SHEET_COUNTRY, qCountry);
 
   // --- Semantic 2: Group by province (only Thailand) ---
-  const qProvince = `=QUERY('${rawName}'!A:ZZ, "SELECT ${colPv}, COUNT(${colPv}) WHERE ${colCt} = 'Thailand' AND ${colPv} IS NOT NULL GROUP BY ${colPv} ORDER BY COUNT(${colPv}) DESC LABEL ${colPv} 'Province (TH)', COUNT(${colPv}) 'Hotspots'", 1)`;
+  const qProvince = `=QUERY('${rawName}'!A:BH, "SELECT ${colPv}, COUNT(${colPv}) WHERE ${colCt} = 'Thailand' AND ${colPv} IS NOT NULL GROUP BY ${colPv} ORDER BY COUNT(${colPv}) DESC LABEL ${colPv} 'Province (TH)', COUNT(${colPv}) 'Hotspots'", 1)`;
   _createSemanticSheet(ss, CONFIG.SHEET_PROVINCE, qProvince);
 
   // --- Semantic 3: Group by Land Use (only Thailand) ---
-  const qLanduse = `=QUERY('${rawName}'!A:ZZ, "SELECT ${colLu}, COUNT(${colLu}) WHERE ${colCt} = 'Thailand' AND ${colLu} IS NOT NULL GROUP BY ${colLu} ORDER BY COUNT(${colLu}) DESC LABEL ${colLu} 'Land Use', COUNT(${colLu}) 'Hotspots'", 1)`;
+  const qLanduse = `=QUERY('${rawName}'!A:BH, "SELECT ${colLu}, COUNT(${colLu}) WHERE ${colCt} = 'Thailand' AND ${colLu} IS NOT NULL GROUP BY ${colLu} ORDER BY COUNT(${colLu}) DESC LABEL ${colLu} 'Land Use', COUNT(${colLu}) 'Hotspots'", 1)`;
   _createSemanticSheet(ss, CONFIG.SHEET_LANDUSE, qLanduse);
 
   Logger.log("[GISTDA_Hotspot_Lib] Semantic finished");
