@@ -173,7 +173,7 @@ function _fetchDataToSpreadsheet(ss, limit = 1000) {
     allRows = allRows.concat(batchRows);
     Logger.log(`[GISTDA_Hotspot_Lib] Data retrieved: ${allRows.length} rows`);
 
-    offset += LIMIT;
+    offset += limit;
 
     // 1. Safety Break
     if (offset > MAX_LIMIT) {
@@ -183,8 +183,8 @@ function _fetchDataToSpreadsheet(ss, limit = 1000) {
 
     // 2. Logical Stop
     // - json.numberMatched : API tells the total records
-    // - features.length < LIMIT : API doesn't tell the total records
-    if ((json.numberMatched && offset >= json.numberMatched) || features.length < LIMIT) {
+    // - features.length < limit : API doesn't tell the total records
+    if ((json.numberMatched && offset >= json.numberMatched) || features.length < limit) {
       hasMoreData = false;
       Logger.log(`[GISTDA_Hotspot_Lib] Data retrieving finished: ${json.numberMatched} rows`);
     }
